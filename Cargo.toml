@@ -1,0 +1,6 @@
+[package]
+name = "texture"
+version = "0.1.0"
+authors = ["Rafael Medina García <rafamedgar@gmail.com>"]
+
+[dependencies]
