@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use state;
+use state::State;
 
 pub trait GameCommand {
     /// Function to execute when command is called
@@ -41,5 +41,5 @@ pub trait GameCommand {
     ///     }
     /// }
     /// ```
-    fn execute(&self, state: &mut Box<state::State>);
+    fn execute(&self, state: &mut Box<State>);
 }

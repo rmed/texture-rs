@@ -22,17 +22,18 @@
 
 use std::collections::HashMap;
 use std::io;
-use command;
-use scenario;
-use state;
+
+use command::GameCommand;
+use scenario::Scenario;
+use state::State;
 
 pub struct GameMaster {
     // Game state
-    state: Box<state::State>,
+    state: Box<State>,
     // Global game commands
-    commands: HashMap<String, Box<command::GameCommand>>,
+    commands: HashMap<String, Box<GameCommand>>,
     // Scenarios
-    scenarios: HashMap<String, Box<scenario::Scenario>>
+    scenarios: HashMap<String, Box<Scenario>>
 }
 
 impl GameMaster {
@@ -42,8 +43,32 @@ impl GameMaster {
     ///
     /// ```
     /// use std::collections::HashMap;
+    /// use texture::master::GameMaster;
+    /// use texture::state::State;
+    /// use texture::state::BasicState;
+    ///
+    /// // Create basic state
+    /// let mut state = BasicState::new();
+    ///
+    /// // Create game master
+    /// let mut game_master = GameMaster::new(Box::new(state));
+    /// ```
+    pub fn new(state: Box<State>) -> GameMaster {
+
+        GameMaster {
+            state: state,
+            commands: HashMap::new(),
+            scenarios: HashMap::new()
+        }
+    }
+
+    /// Insert a new global command in the map
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
     /// use texture::command::GameCommand;
-    /// use texture::scenario::Scenario;
     /// use texture::master::GameMaster;
     /// use texture::state::State;
     /// use texture::state::BasicState;
@@ -57,8 +82,32 @@ impl GameMaster {
     ///     }
     /// }
     ///
+    /// // Create basic state
+    /// let mut state = BasicState::new();
+    ///
+    /// // Create game master
+    /// let mut game_master = GameMaster::new(Box::new(state));
+    ///
+    /// // Create custom command
+    /// let command = MyCommand;
+    /// game_master.add_command("test".to_string(), Box::new(command));
+    /// ```
+    pub fn add_command(&mut self, name: String, command: Box<GameCommand>) {
+        self.commands.insert(name, command);
+    }
+
+    /// Insert a new scenario in the map
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use texture::scenario::Scenario;
+    /// use texture::master::GameMaster;
+    /// use texture::state::State;
+    /// use texture::state::BasicState;
+    ///
     /// struct ScenarioA;
-    /// struct ScenarioB;
     ///
     /// impl Scenario for ScenarioA {
     ///     fn load(&self, state: &mut Box<State>) {
@@ -72,47 +121,18 @@ impl GameMaster {
     ///     }
     /// }
     ///
-    /// impl Scenario for ScenarioB {
-    ///     fn load(&self, state: &mut Box<State>) {
-    ///         println!("This is Scenario B");
-    ///     }
-    ///
-    ///     fn do_action(&self, command: String, state: &mut Box<State>) {
-    ///         println!("Actions should be parsed here");
-    ///         // Load "start"
-    ///         state.set_scenario("start".to_string());
-    ///     }
-    /// }
-    ///
     /// // Create basic state
-    /// let mut state: Box<State> = Box::new(BasicState::new());
+    /// let mut state = BasicState::new();
     ///
-    /// // Create custom commands
-    /// let command: Box<GameCommand> = Box::new(MyCommand);
+    /// // Create game master
+    /// let mut game_master = GameMaster::new(Box::new(state));
     ///
-    /// let mut commands: HashMap<String, Box<GameCommand>> = HashMap::new();
-    /// commands.insert("test".to_string(), command);
-    ///
-    /// // Create scenarios
-    /// let scenarioa: Box<Scenario> = Box::new(ScenarioA);
-    /// let scenariob: Box<Scenario> = Box::new(ScenarioB);
-    ///
-    /// let mut scenarios: HashMap<String, Box<Scenario>> = HashMap::new();
-    /// scenarios.insert("start".to_string(), scenarioa);
-    /// scenarios.insert("scenariob".to_string(), scenariob);
-    ///
-    ///
-    /// let mut game_master = GameMaster::new(state, commands, scenarios);
-    pub fn new(
-        state: Box<state::State>,
-        commands: HashMap<String, Box<command::GameCommand>>,
-        scenarios: HashMap<String, Box<scenario::Scenario>>) -> GameMaster {
-
-        GameMaster {
-            state: state,
-            commands: commands,
-            scenarios: scenarios
-        }
+    /// // Create scenario
+    /// let scenario = ScenarioA;
+    /// game_master.add_scenario("start".to_string(), Box::new(scenario));
+    /// ```
+    pub fn add_scenario(&mut self, name: String, scenario: Box<Scenario>) {
+        self.scenarios.insert(name, scenario);
     }
 
     /// Start a new game by calling the main loop

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use state;
+use state::State;
 
 /// Base scenario trait
 pub trait Scenario {
@@ -28,8 +28,8 @@ pub trait Scenario {
     ///
     /// Ideally, only prints text describing the scenario, apart from any additional
     /// functionalities that may be included (e.g. setting flag values).
-    fn load(&self, state: &mut Box<state::State>);
+    fn load(&self, state: &mut Box<State>);
 
     /// Method executed when user input is received
-    fn do_action(&self, command: String, state: &mut Box<state::State>);
+    fn do_action(&self, command: String, state: &mut Box<State>);
 }

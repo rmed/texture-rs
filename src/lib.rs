@@ -24,10 +24,3 @@ pub mod state;
 pub mod command;
 pub mod scenario;
 pub mod master;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
