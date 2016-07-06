@@ -22,10 +22,12 @@
 
 use std::collections::HashMap;
 use std::io;
+use std::io::Write;
 
 use command::GameCommand;
 use scenario::Scenario;
 use state::State;
+use util;
 
 pub struct GameMaster {
     // Game state
@@ -114,7 +116,7 @@ impl GameMaster {
     ///         println!("This is Scenario A");
     ///     }
     ///
-    ///     fn do_action(&self, command: String, state: &mut Box<State>) {
+    ///     fn do_action(&self, command: &str, state: &mut Box<State>) {
     ///         println!("Actions should be parsed here");
     ///         // Load "scenariob"
     ///         state.set_scenario("scenariob".to_string());
@@ -164,8 +166,8 @@ impl GameMaster {
     /// executed
     fn exec_game_command(&mut self, command: &str) -> bool {
         let game_command = match self.commands.get(command) {
-            Some(f) => { f }
-            _ => return false
+            Some(f) => { f },
+            None => return false
         };
 
         game_command.execute(&mut self.state);
@@ -178,6 +180,9 @@ impl GameMaster {
         self.state.set_scenario("start".to_string());
         self.change_scenario();
 
+        // Clear screen
+        util::clear_screen();
+
         // Infinite game loop
         let mut input = String::new();
         let mut command;
@@ -186,6 +191,7 @@ impl GameMaster {
         loop {
             // Get input
             print!("\n> ");
+            io::stdout().flush().expect("Could not flush stdout");;
 
             input.clear();
             match io::stdin().read_line(&mut input) {
@@ -201,13 +207,13 @@ impl GameMaster {
             println!(" ");
 
             // Try to execute global game commands
-            if !self.exec_game_command(&command) {
+            if !self.exec_game_command(&command.trim()) {
 
                 // Perform scenario action
                 current_scenario = self.state.get_current_scenario();
 
                 match self.scenarios.get(&current_scenario) {
-                    Some(s) => s.do_action(command, &mut self.state),
+                    Some(s) => s.do_action(&command.trim(), &mut self.state),
                     _ => {
                         println!("[ERROR] scenario {} not found", current_scenario);
                         return

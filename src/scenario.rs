@@ -31,5 +31,5 @@ pub trait Scenario {
     fn load(&self, state: &mut Box<State>);
 
     /// Method executed when user input is received
-    fn do_action(&self, command: String, state: &mut Box<State>);
+    fn do_action(&self, command: &str, state: &mut Box<State>);
 }

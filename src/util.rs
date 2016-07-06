@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod state;
-pub mod command;
-pub mod scenario;
-pub mod master;
-pub mod util;
+/// Clear the scren by sending a control character
+pub fn clear_screen() {
+    print!("{}[2J", 27 as char);
+}
