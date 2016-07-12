@@ -1,7 +1,18 @@
 [package]
 name = "texture"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Rafael Medina García <rafamedgar@gmail.com>"]
+description = "Micro-engine for creating text-based adventures"
+exclude = [".gitignore", ".git"]
+homepage = "https://github.com/rmed/texture-rs"
+repository = "https://github.com/rmed/texture-rs.git"
+readme = "README.md"
+keywords = ["texture", "text", "adventure", "game", "cli"]
+license = "MIT"
+license-file = "LICENSE"
+
+[lib]
+name = "texture"
 
 [dependencies]
 linenoise-rust = "0.2.0"
