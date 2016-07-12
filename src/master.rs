@@ -21,8 +21,8 @@
 // SOFTWARE.
 
 use std::collections::HashMap;
-use std::io;
-use std::io::Write;
+
+use linenoise;
 
 use command::GameCommand;
 use scenario::Scenario;
@@ -176,6 +176,9 @@ impl GameMaster {
 
     /// Main game loop
     fn main_loop(&mut self) {
+        // Setup linenoise
+        linenoise::set_multiline(0);
+
         // Set first scenario
         self.state.set_scenario("start".to_string());
         self.change_scenario();
@@ -190,16 +193,9 @@ impl GameMaster {
 
         loop {
             // Get input
-            print!("\n> ");
-            io::stdout().flush().expect("Could not flush stdout");;
-
-            input.clear();
-            match io::stdin().read_line(&mut input) {
-                Ok(_) => {},
-                Err(e) => {
-                    println!("error: {}", e);
-                    continue
-                }
+            input = match linenoise::input("\n> ") {
+                Some(i) => { i },
+                None => { continue }
             };
 
             command = input.clone();

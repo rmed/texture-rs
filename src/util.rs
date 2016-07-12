@@ -20,7 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// Clear the scren by sending a control character
+use linenoise;
+
+/// Clear the screen
 pub fn clear_screen() {
-    print!("{}[2J", 27 as char);
+    linenoise::clear_screen();
 }
