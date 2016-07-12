@@ -27,7 +27,6 @@ use linenoise;
 use command::GameCommand;
 use scenario::Scenario;
 use state::State;
-use util;
 
 pub struct GameMaster {
     // Game state
@@ -182,9 +181,6 @@ impl GameMaster {
         // Set first scenario
         self.state.set_scenario("start".to_string());
         self.change_scenario();
-
-        // Clear screen
-        util::clear_screen();
 
         // Infinite game loop
         let mut input = String::new();
