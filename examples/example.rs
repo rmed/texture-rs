@@ -74,10 +74,16 @@ impl <S: CustomState> Scenario<S> for Start {
 
     fn do_action(&self, command: &str, state: &mut Box<S>) -> Option<String> {
         println!("Your command was {}", command);
-        println!("Setting in_start to false and loading next scenario...");
 
-        state.set_flag_false("in_start".to_string());
-        return Some("second".to_string());
+        match command {
+            "tick" => { println!("ticking"); return Some("_tick".to_string()) }
+            _ => {
+                println!("Setting in_start to false and loading next scenario...");
+
+                state.set_flag_false("in_start".to_string());
+                return Some("second".to_string());
+            }
+        };
     }
 }
 
@@ -99,7 +105,7 @@ impl <S: CustomState> Scenario<S> for Second {
 }
 
 impl <S: CustomState> GameCommand <S> for Exit {
-    fn execute(&self, state: &mut Box<S>) -> Option<String> {
+    fn execute(&self, _: &mut Box<S>) -> Option<String> {
         println!("Exiting game");
         process::exit(0);
     }

@@ -1,6 +1,6 @@
 [package]
 name = "texture"
-version = "0.0.2"
+version = "0.0.4"
 authors = ["Rafael Medina García <rafamedgar@gmail.com>"]
 description = "Micro-engine for creating text-based adventures"
 exclude = [".gitignore", ".git"]

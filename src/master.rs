@@ -188,9 +188,14 @@ impl <S> GameMaster <S> {
     }
 
     /// Load a new scenario, calling its `load()` method
-    fn change_scenario(&mut self, name: String) -> Option<String> {
+    fn change_scenario(&mut self, name: &str) -> Option<String> {
+        match name {
+            "_tick" => { return None },
+            _ => {}
+        };
+
         // Obtain the scenario
-        let scenario = match self.scenarios.get(&name) {
+        let scenario = match self.scenarios.get(name) {
             Some(s) => { s },
             _ => {
                 panic!("[ERROR] scenario {} not found", name);
@@ -198,7 +203,8 @@ impl <S> GameMaster <S> {
         };
 
         // Load the scenario
-        self.current = name;
+        println!(" ");
+        self.current = name.to_string();
         return scenario.load(&mut self.state);
     }
 
@@ -232,7 +238,7 @@ impl <S> GameMaster <S> {
         linenoise::set_multiline(0);
 
         // Set first scenario
-        self.change_scenario("start".to_string());
+        self.change_scenario("start");
 
         // Infinite game loop
         let mut input = String::new();
@@ -251,13 +257,13 @@ impl <S> GameMaster <S> {
 
             // Try to execute global game commands
             match self.exec_game_command(&command.trim()) {
-                Some(r) => { self.change_scenario(r); continue },
+                Some(r) => { self.change_scenario(&r); continue },
                 _ => {}
             };
 
             // No global command found, execute scenario
             match self.exec_current_scenario(&command.trim()) {
-                Some(r) => { self.change_scenario(r); },
+                Some(r) => { self.change_scenario(&r); },
                 _ => {}
             };
         }
