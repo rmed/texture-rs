@@ -20,26 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use state::State;
-
-pub trait GameCommand {
+pub trait GameCommand<S> {
     /// Function to execute when command is called
     ///
     /// # Examples
     ///
     /// ```
     /// use texture::command::GameCommand;
-    /// use texture::state::State;
     ///
+    /// // Custom state type
+    /// trait MyState {
+    ///     fn new() -> Self;
+    /// }
+    ///
+    /// // Custom command
     /// struct MyCommand;
     ///
-    /// impl GameCommand for MyCommand {
+    /// impl <S: MyState> GameCommand <S> for MyCommand {
     ///     // Print message and load first scenario
-    ///     fn execute(&self, state: &mut Box<State>) {
+    ///     fn execute(&self, state: &mut Box<S>) -> Option<String> {
     ///         println!("This is my command");
-    ///         state.set_scenario("start".to_string());
+    ///
+    ///         return None;
     ///     }
     /// }
     /// ```
-    fn execute(&self, state: &mut Box<State>);
+    fn execute(&self, state: &mut Box<S>) -> Option<String>;
 }

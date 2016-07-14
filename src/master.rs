@@ -26,37 +26,52 @@ use linenoise;
 
 use command::GameCommand;
 use scenario::Scenario;
-use state::State;
 
-pub struct GameMaster {
+pub struct GameMaster<S> {
+    // Current scenario
+    current: String,
     // Game state
-    state: Box<State>,
+    state: Box<S>,
     // Global game commands
-    commands: HashMap<String, Box<GameCommand>>,
+    commands: HashMap<String, Box<GameCommand<S>>>,
     // Scenarios
-    scenarios: HashMap<String, Box<Scenario>>
+    scenarios: HashMap<String, Box<Scenario<S>>>
 }
 
-impl GameMaster {
+impl <S> GameMaster <S> {
     /// Create a new game master using the provided data
     ///
     /// # Examples
     ///
     /// ```
-    /// use std::collections::HashMap;
     /// use texture::master::GameMaster;
-    /// use texture::state::State;
-    /// use texture::state::BasicState;
+    ///
+    ///
+    /// trait MyState {
+    ///     fn new() -> Self;
+    /// }
+    ///
+    /// // Create a global state
+    /// struct CustomState {
+    ///     flag: bool
+    /// }
+    ///
+    /// impl MyState for CustomState {
+    ///     fn new() -> CustomState {
+    ///         CustomState{ flag: true }
+    ///     }
+    /// }
     ///
     /// // Create basic state
-    /// let mut state = BasicState::new();
+    /// let mut state = CustomState::new();
     ///
     /// // Create game master
-    /// let mut game_master = GameMaster::new(Box::new(state));
+    /// let mut gm = GameMaster::new(Box::new(state));
     /// ```
-    pub fn new(state: Box<State>) -> GameMaster {
+    pub fn new(state: Box<S>) -> GameMaster<S> {
 
         GameMaster {
+            current: "".to_string(),
             state: state,
             commands: HashMap::new(),
             scenarios: HashMap::new()
@@ -68,32 +83,47 @@ impl GameMaster {
     /// # Examples
     ///
     /// ```
-    /// use std::collections::HashMap;
     /// use texture::command::GameCommand;
     /// use texture::master::GameMaster;
-    /// use texture::state::State;
-    /// use texture::state::BasicState;
+    ///
+    ///
+    /// trait MyState {
+    ///     fn new() -> Self;
+    /// }
+    ///
+    /// // Create a global state
+    /// struct CustomState {
+    ///     flag: bool
+    /// }
+    ///
+    /// impl MyState for CustomState {
+    ///     fn new() -> CustomState {
+    ///         CustomState{ flag: true }
+    ///     }
+    /// }
     ///
     /// struct MyCommand;
     ///
-    /// impl GameCommand for MyCommand {
+    /// impl <S: MyState> GameCommand <S> for MyCommand {
     ///     // Print message
-    ///     fn execute(&self, state: &mut Box<State>) {
+    ///     fn execute(&self, state: &mut Box<S>) -> Option<String> {
     ///         println!("This is my command");
+    ///
+    ///         return None;
     ///     }
     /// }
     ///
     /// // Create basic state
-    /// let mut state = BasicState::new();
+    /// let mut state = CustomState::new();
     ///
     /// // Create game master
-    /// let mut game_master = GameMaster::new(Box::new(state));
+    /// let mut gm = GameMaster::new(Box::new(state));
     ///
     /// // Create custom command
     /// let command = MyCommand;
-    /// game_master.add_command("test".to_string(), Box::new(command));
+    /// gm.add_command("test".to_string(), Box::new(command));
     /// ```
-    pub fn add_command(&mut self, name: String, command: Box<GameCommand>) {
+    pub fn add_command(&mut self, name: String, command: Box<GameCommand<S>>) {
         self.commands.insert(name, command);
     }
 
@@ -102,37 +132,53 @@ impl GameMaster {
     /// # Examples
     ///
     /// ```
-    /// use std::collections::HashMap;
     /// use texture::scenario::Scenario;
     /// use texture::master::GameMaster;
-    /// use texture::state::State;
-    /// use texture::state::BasicState;
     ///
-    /// struct ScenarioA;
+    /// trait MyState {
+    ///     fn new() -> Self;
+    /// }
     ///
-    /// impl Scenario for ScenarioA {
-    ///     fn load(&self, state: &mut Box<State>) {
-    ///         println!("This is Scenario A");
-    ///     }
+    /// // Create a global state
+    /// struct CustomState {
+    ///     flag: bool
+    /// }
     ///
-    ///     fn do_action(&self, command: &str, state: &mut Box<State>) {
-    ///         println!("Actions should be parsed here");
-    ///         // Load "scenariob"
-    ///         state.set_scenario("scenariob".to_string());
+    /// impl MyState for CustomState {
+    ///     fn new() -> CustomState {
+    ///         CustomState{ flag: true }
     ///     }
     /// }
     ///
+    /// struct ScenarioA;
+    ///
+    /// impl <S:MyState> Scenario <S> for ScenarioA {
+    ///     fn load(&self, state: &mut Box<S>) -> Option<String> {
+    ///         println!("This is Scenario A");
+    ///
+    ///         return None;
+    ///     }
+    ///
+    ///     fn do_action(&self, command: &str, state: &mut Box<S>) -> Option<String> {
+    ///         println!("Actions should be parsed here");
+    ///
+    ///         // Load "scenariob"
+    ///         return Some("scenariob".to_string());
+    ///     }
+    /// }
+    ///
+    ///
     /// // Create basic state
-    /// let mut state = BasicState::new();
+    /// let mut state = CustomState::new();
     ///
     /// // Create game master
-    /// let mut game_master = GameMaster::new(Box::new(state));
+    /// let mut gm = GameMaster::new(Box::new(state));
     ///
     /// // Create scenario
     /// let scenario = ScenarioA;
-    /// game_master.add_scenario("start".to_string(), Box::new(scenario));
+    /// gm.add_scenario("start".to_string(), Box::new(scenario));
     /// ```
-    pub fn add_scenario(&mut self, name: String, scenario: Box<Scenario>) {
+    pub fn add_scenario(&mut self, name: String, scenario: Box<Scenario<S>>) {
         self.scenarios.insert(name, scenario);
     }
 
@@ -142,35 +188,42 @@ impl GameMaster {
     }
 
     /// Load a new scenario, calling its `load()` method
-    fn change_scenario(&mut self) {
+    fn change_scenario(&mut self, name: String) -> Option<String> {
         // Obtain the scenario
-        let scenario_name = self.state.get_next_scenario();
-
-        let scenario = match self.scenarios.get(&scenario_name) {
+        let scenario = match self.scenarios.get(&name) {
             Some(s) => { s },
             _ => {
-                println!("[ERROR] scenario {} not found", scenario_name);
-                return
+                panic!("[ERROR] scenario {} not found", name);
             }
         };
 
         // Load the scenario
-        scenario.load(&mut self.state);
-        self.state.load_scenario();
+        self.current = name;
+        return scenario.load(&mut self.state);
     }
 
     /// Execute a global game command (if any)
-    ///
-    /// Returns a boolean indicating whether or not a game command has been
-    /// executed
-    fn exec_game_command(&mut self, command: &str) -> bool {
+    fn exec_game_command(&mut self, command: &str) -> Option<String> {
         let game_command = match self.commands.get(command) {
             Some(f) => { f },
-            None => return false
+            None => return None
         };
 
-        game_command.execute(&mut self.state);
-        return true;
+        return game_command.execute(&mut self.state);
+    }
+
+    /// Execute the action of the current scenario
+    fn exec_current_scenario(&mut self, command: &str) -> Option<String> {
+        let scenario = match self.scenarios.get(&self.current) {
+            Some(s) => { s },
+            _ => {
+                panic!("[ERROR] scenario {} not found", self.current);
+            }
+        };
+
+        let result = scenario.do_action(&command.trim(), &mut self.state);
+
+        return result;
     }
 
     /// Main game loop
@@ -179,13 +232,11 @@ impl GameMaster {
         linenoise::set_multiline(0);
 
         // Set first scenario
-        self.state.set_scenario("start".to_string());
-        self.change_scenario();
+        self.change_scenario("start".to_string());
 
         // Infinite game loop
         let mut input = String::new();
         let mut command;
-        let mut current_scenario;
 
         loop {
             // Get input
@@ -199,24 +250,16 @@ impl GameMaster {
             println!(" ");
 
             // Try to execute global game commands
-            if !self.exec_game_command(&command.trim()) {
+            match self.exec_game_command(&command.trim()) {
+                Some(r) => { self.change_scenario(r); continue },
+                _ => {}
+            };
 
-                // Perform scenario action
-                current_scenario = self.state.get_current_scenario();
-
-                match self.scenarios.get(&current_scenario) {
-                    Some(s) => s.do_action(&command.trim(), &mut self.state),
-                    _ => {
-                        println!("[ERROR] scenario {} not found", current_scenario);
-                        return
-                    }
-                };
-            }
-
-            // Check if a scenario must be loaded
-            if self.state.has_next_scenario() {
-                self.change_scenario();
-            }
+            // No global command found, execute scenario
+            match self.exec_current_scenario(&command.trim()) {
+                Some(r) => { self.change_scenario(r); },
+                _ => {}
+            };
         }
     }
 }
