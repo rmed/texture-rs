@@ -21,21 +21,25 @@
 // SOFTWARE.
 
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use linenoise;
 
 use command::GameCommand;
-use scenario::Scenario;
+use scenario::{Loader, Scenario};
+use util::TICK;
+use util::LOAD;
 
 pub struct GameMaster<S> {
     // Current scenario
-    current: String,
+    current: Rc<RefCell<Scenario<S>>>,
+    // Scenario loader
+    loader: Rc<RefCell<Loader<S>>>,
     // Game state
-    state: Box<S>,
+    state: Rc<RefCell<S>>,
     // Global game commands
     commands: HashMap<String, Box<GameCommand<S>>>,
-    // Scenarios
-    scenarios: HashMap<String, Box<Scenario<S>>>
 }
 
 impl <S> GameMaster <S> {
@@ -44,8 +48,12 @@ impl <S> GameMaster <S> {
     /// # Examples
     ///
     /// ```
-    /// use texture::master::GameMaster;
+    /// use std::cell::RefCell;
+    /// use std::rc::Rc;
     ///
+    /// use texture::master::GameMaster;
+    /// use texture::scenario::{Loader, Scenario};
+    /// use texture::util::TICK;
     ///
     /// trait MyState {
     ///     fn new() -> Self;
@@ -62,19 +70,47 @@ impl <S> GameMaster <S> {
     ///     }
     /// }
     ///
+    /// // Create dummy scenario
+    /// struct MyScenario;
+    ///
+    /// impl <S: MyState> Scenario <S> for MyScenario {
+    ///
+    ///     fn load(&self, state: &Rc<RefCell<S>>,
+    ///             loader: &Rc<RefCell<Loader<S>>>)
+    ///             -> i32 {
+    ///         println!("Test");
+    ///
+    ///         TICK
+    ///     }
+    ///
+    ///     fn do_action(&self, command: &str, state: &Rc<RefCell<S>>,
+    ///                  loader: &Rc<RefCell<Loader<S>>>)
+    ///                  -> i32 {
+    ///         println!("Action: {}", command);
+    ///
+    ///         TICK
+    ///     }
+    /// }
+    ///
     /// // Create basic state
-    /// let mut state = CustomState::new();
+    /// let state = Rc::new(RefCell::new(CustomState::new()));
+    ///
+    /// // Create start scenario
+    /// let start = Rc::new(RefCell::new(MyScenario));
     ///
     /// // Create game master
-    /// let mut gm = GameMaster::new(Box::new(state));
+    /// let mut gm = GameMaster::new(state, start);
     /// ```
-    pub fn new(state: Box<S>) -> GameMaster<S> {
+    pub fn new(state: Rc<RefCell<S>>, start: Rc<RefCell<Scenario<S>>>)
+               -> GameMaster<S> {
+        let mut loader = Loader::new();
+        loader.set_scenario(start.clone());
 
         GameMaster {
-            current: "".to_string(),
+            current: start,
+            loader: Rc::new(RefCell::new(loader)),
             state: state,
             commands: HashMap::new(),
-            scenarios: HashMap::new()
         }
     }
 
@@ -83,8 +119,13 @@ impl <S> GameMaster <S> {
     /// # Examples
     ///
     /// ```
+    /// use std::cell::RefCell;
+    /// use std::rc::Rc;
+    ///
     /// use texture::command::GameCommand;
     /// use texture::master::GameMaster;
+    /// use texture::scenario::{Loader, Scenario};
+    /// use texture::util::TICK;
     ///
     ///
     /// trait MyState {
@@ -102,22 +143,50 @@ impl <S> GameMaster <S> {
     ///     }
     /// }
     ///
+    /// // Create dummy scenario
+    /// struct MyScenario;
+    ///
+    /// impl <S: MyState> Scenario <S> for MyScenario {
+    ///
+    ///     fn load(&self, state: &Rc<RefCell<S>>,
+    ///             loader: &Rc<RefCell<Loader<S>>>)
+    ///             -> i32 {
+    ///         println!("Test");
+    ///
+    ///         TICK
+    ///     }
+    ///
+    ///     fn do_action(&self, command: &str, state: &Rc<RefCell<S>>,
+    ///                  loader: &Rc<RefCell<Loader<S>>>)
+    ///                  -> i32 {
+    ///         println!("Action: {}", command);
+    ///
+    ///         TICK
+    ///     }
+    /// }
+    ///
+    /// // Create command
     /// struct MyCommand;
     ///
     /// impl <S: MyState> GameCommand <S> for MyCommand {
     ///     // Print message
-    ///     fn execute(&self, state: &mut Box<S>) -> Option<String> {
+    ///     fn execute(&self, state: &Rc<RefCell<S>>,
+    ///                loader: &Rc<RefCell<Loader<S>>>)
+    ///                -> i32 {
     ///         println!("This is my command");
     ///
-    ///         return None;
+    ///         TICK
     ///     }
     /// }
     ///
     /// // Create basic state
-    /// let mut state = CustomState::new();
+    /// let state = Rc::new(RefCell::new(CustomState::new()));
+    ///
+    /// // Create start scenario
+    /// let start = Rc::new(RefCell::new(MyScenario));
     ///
     /// // Create game master
-    /// let mut gm = GameMaster::new(Box::new(state));
+    /// let mut gm = GameMaster::new(state, start);
     ///
     /// // Create custom command
     /// let command = MyCommand;
@@ -127,109 +196,39 @@ impl <S> GameMaster <S> {
         self.commands.insert(name, command);
     }
 
-    /// Insert a new scenario in the map
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use texture::scenario::Scenario;
-    /// use texture::master::GameMaster;
-    ///
-    /// trait MyState {
-    ///     fn new() -> Self;
-    /// }
-    ///
-    /// // Create a global state
-    /// struct CustomState {
-    ///     flag: bool
-    /// }
-    ///
-    /// impl MyState for CustomState {
-    ///     fn new() -> CustomState {
-    ///         CustomState{ flag: true }
-    ///     }
-    /// }
-    ///
-    /// struct ScenarioA;
-    ///
-    /// impl <S:MyState> Scenario <S> for ScenarioA {
-    ///     fn load(&self, state: &mut Box<S>) -> Option<String> {
-    ///         println!("This is Scenario A");
-    ///
-    ///         return None;
-    ///     }
-    ///
-    ///     fn do_action(&self, command: &str, state: &mut Box<S>) -> Option<String> {
-    ///         println!("Actions should be parsed here");
-    ///
-    ///         // Load "scenariob"
-    ///         return Some("scenariob".to_string());
-    ///     }
-    /// }
-    ///
-    ///
-    /// // Create basic state
-    /// let mut state = CustomState::new();
-    ///
-    /// // Create game master
-    /// let mut gm = GameMaster::new(Box::new(state));
-    ///
-    /// // Create scenario
-    /// let scenario = ScenarioA;
-    /// gm.add_scenario("start".to_string(), Box::new(scenario));
-    /// ```
-    pub fn add_scenario(&mut self, name: String, scenario: Box<Scenario<S>>) {
-        self.scenarios.insert(name, scenario);
-    }
-
     /// Start a new game by calling the main loop
     pub fn start_game(&mut self) {
         self.main_loop();
     }
 
-    /// Load a new scenario, calling its `load()` method
-    fn change_scenario(&mut self, name: &str) -> Option<String> {
-        match name {
-            "_tick" => { return None },
-            _ => {}
-        };
+    /// Load scenario from the loader and call `load()` method
+    fn load_scenario(&mut self) -> i32 {
+        self.current = self.loader.borrow().get_scenario();
 
-        // Obtain the scenario
-        let scenario = match self.scenarios.get(name) {
-            Some(s) => { s },
-            _ => {
-                panic!("[ERROR] scenario {} not found", name);
-            }
-        };
-
-        // Load the scenario
         println!(" ");
-        self.current = name.to_string();
-        return scenario.load(&mut self.state);
+
+        self.current.borrow().load(&self.state, &self.loader)
     }
 
     /// Execute a global game command (if any)
-    fn exec_game_command(&mut self, command: &str) -> Option<String> {
+    fn exec_game_command(&mut self, command: &str) -> i32 {
         let game_command = match self.commands.get(command) {
             Some(f) => { f },
-            None => return None
+            None => return TICK
         };
 
-        return game_command.execute(&mut self.state);
+        game_command.execute(&self.state, &self.loader)
     }
 
     /// Execute the action of the current scenario
-    fn exec_current_scenario(&mut self, command: &str) -> Option<String> {
-        let scenario = match self.scenarios.get(&self.current) {
-            Some(s) => { s },
-            _ => {
-                panic!("[ERROR] scenario {} not found", self.current);
-            }
-        };
+    fn exec_current_scenario(&mut self, command: &str) -> i32 {
+        let result = self.current.borrow().do_action(
+            &command.trim(),
+            &self.state,
+            &self.loader
+        );
 
-        let result = scenario.do_action(&command.trim(), &mut self.state);
-
-        return result;
+        result
     }
 
     /// Main game loop
@@ -237,12 +236,12 @@ impl <S> GameMaster <S> {
         // Setup linenoise
         linenoise::set_multiline(0);
 
-        // Set first scenario
-        self.change_scenario("start");
-
         // Infinite game loop
         let mut input = String::new();
         let mut command;
+
+        // Load starting scenario
+        self.current.borrow().load(&self.state, &self.loader);
 
         loop {
             // Get input
@@ -256,14 +255,15 @@ impl <S> GameMaster <S> {
             println!(" ");
 
             // Try to execute global game commands
+            self.exec_game_command(&command.trim());
             match self.exec_game_command(&command.trim()) {
-                Some(r) => { self.change_scenario(&r); continue },
+                LOAD => { self.load_scenario(); continue },
                 _ => {}
             };
 
             // No global command found, execute scenario
             match self.exec_current_scenario(&command.trim()) {
-                Some(r) => { self.change_scenario(&r); },
+                LOAD => { self.load_scenario(); },
                 _ => {}
             };
         }

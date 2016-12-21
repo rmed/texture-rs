@@ -1,11 +1,14 @@
 extern crate texture;
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::process;
 use std::collections::HashMap;
 
 use texture::master::GameMaster;
 use texture::command::GameCommand;
-use texture::scenario::Scenario;
+use texture::scenario::{Loader, Scenario};
+use texture::util::{TICK, LOAD};
 
 
 // Custom state object and type
@@ -65,47 +68,49 @@ struct Second;
 struct Exit;
 
 impl <S: CustomState> Scenario<S> for Start {
-    fn load(&self, state: &mut Box<S>) -> Option<String> {
+    fn load(&self, state: &Rc<RefCell<S>>, loader: &Rc<RefCell<Loader<S>>>) -> i32 {
         println!("This is the start scenario");
-        println!("Value of in_start: {}", state.get_flag("in_start".to_string()));
+        println!("Value of in_start: {}", state.borrow().get_flag("in_start".to_string()));
 
-        return None;
+        TICK
     }
 
-    fn do_action(&self, command: &str, state: &mut Box<S>) -> Option<String> {
+    fn do_action(&self, command: &str, state: &Rc<RefCell<S>>, loader: &Rc<RefCell<Loader<S>>>) -> i32 {
         println!("Your command was {}", command);
 
         match command {
-            "tick" => { println!("ticking"); return Some("_tick".to_string()) }
+            "tick" => { println!("ticking"); TICK }
             _ => {
                 println!("Setting in_start to false and loading next scenario...");
 
-                state.set_flag_false("in_start".to_string());
-                return Some("second".to_string());
+                state.borrow_mut().set_flag_false("in_start".to_string());
+                loader.borrow_mut().set_scenario(Rc::new(RefCell::new(Second)));
+
+                LOAD
             }
-        };
+        }
     }
 }
 
 impl <S: CustomState> Scenario<S> for Second {
-    fn load(&self, state: &mut Box<S>) -> Option<String> {
+    fn load(&self, state: &Rc<RefCell<S>>, loader: &Rc<RefCell<Loader<S>>>) -> i32 {
         println!("This is the second scenario");
-        println!("Value of in_start: {}", state.get_flag("in_start".to_string()));
+        println!("Value of in_start: {}", state.borrow().get_flag("in_start".to_string()));
 
-        return None;
+        TICK
     }
 
-    fn do_action(&self, command: &str, state: &mut Box<S>) -> Option<String> {
+    fn do_action(&self, command: &str, state: &Rc<RefCell<S>>, loader: &Rc<RefCell<Loader<S>>>) -> i32 {
         println!("Your command was {}", command);
         println!("This scenario does nothing");
-        println!("Value of in_start: {}", state.get_flag("in_start".to_string()));
+        println!("Value of in_start: {}", state.borrow().get_flag("in_start".to_string()));
 
-        return None;
+        TICK
     }
 }
 
 impl <S: CustomState> GameCommand <S> for Exit {
-    fn execute(&self, _: &mut Box<S>) -> Option<String> {
+    fn execute(&self, state: &Rc<RefCell<S>>, loader: &Rc<RefCell<Loader<S>>>) -> i32 {
         println!("Exiting game");
         process::exit(0);
     }
@@ -115,16 +120,13 @@ fn main() {
     // Create custom state
     let mut state = MyState::new();
     state.clear();
+    let state_cell = Rc::new(RefCell::new(state));
+
+    // Add scenario
+    let start = Rc::new(RefCell::new(Start));
 
     // Create game master
-    let mut gm = GameMaster::new(Box::new(state));
-
-    // Add scenarios
-    let start = Start;
-    let second = Second;
-
-    gm.add_scenario("start".to_string(), Box::new(start));
-    gm.add_scenario("second".to_string(), Box::new(second));
+    let mut gm = GameMaster::new(state_cell, start);
 
     // Add commands
     let exitcmd = Exit;

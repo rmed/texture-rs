@@ -20,13 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use scenario::Loader;
+
+
 pub trait GameCommand<S> {
     /// Function to execute when command is called
     ///
     /// # Examples
     ///
     /// ```
+    /// use std::rc::Rc;
+    /// use std::cell::RefCell;
+    ///
     /// use texture::command::GameCommand;
+    /// use texture::scenario::Loader;
+    /// use texture::util::TICK;
     ///
     /// // Custom state type
     /// trait MyState {
@@ -38,12 +49,15 @@ pub trait GameCommand<S> {
     ///
     /// impl <S: MyState> GameCommand <S> for MyCommand {
     ///     // Print message and load first scenario
-    ///     fn execute(&self, state: &mut Box<S>) -> Option<String> {
+    ///     fn execute(&self, state: &Rc<RefCell<S>>,
+    ///                 loader: &Rc<RefCell<Loader<S>>>) -> i32 {
+    ///
     ///         println!("This is my command");
     ///
-    ///         return None;
+    ///         TICK
     ///     }
     /// }
     /// ```
-    fn execute(&self, state: &mut Box<S>) -> Option<String>;
+    fn execute(&self, state: &Rc<RefCell<S>>, loader: &Rc<RefCell<Loader<S>>>)
+               -> i32;
 }

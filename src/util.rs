@@ -22,6 +22,9 @@
 
 use linenoise;
 
+pub const TICK: i32 = 0;
+pub const LOAD: i32 = 1;
+
 /// Clear the screen
 pub fn clear_screen() {
     linenoise::clear_screen();
